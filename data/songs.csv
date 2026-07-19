@@ -29,3 +29,8 @@ id,title,artist,genre,mood,energy,tempo_bpm,valence,danceability,acousticness
 28,Lonesome Highway,Blues Man,blues,melancholic,0.35,88,0.42,0.48,0.85
 29,K-Pop Explosion,K-Stars,k-pop,energetic,0.91,132,0.82,0.85,0.20
 30,Neon Shadows,Alt Modern,alternative,dark,0.68,118,0.40,0.71,0.28
+31,Fading Echoes,Silent Room,indie,sad,0.30,68,0.25,0.40,0.75
+32,Rainy Window,Grey Hours,acoustic,sad,0.22,60,0.18,0.30,0.90
+33,Goodbye Letter,Paper Hearts,folk,sad,0.28,65,0.20,0.35,0.82
+34,Empty Chair,Hollow Sound,piano,sad,0.18,55,0.15,0.25,0.95
+35,Last Train Home,Lonely Static,indie rock,sad,0.45,80,0.30,0.45,0.55

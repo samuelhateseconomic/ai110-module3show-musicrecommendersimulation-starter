@@ -76,22 +76,22 @@ classDiagram
 
 ## Scoring Rule (math-based, scale 0–100)
 
-Mood and energy are weighted highest because a listener bends genre to fit the mood/energy they want at live time. Genre therefore weighs less. Acoustic is kept at a solid weight because it is a standing preference — someone who wants acoustic wants it whether they are happy or not, energetic or not. It is now scored on a numeric 0–1 scale (closeness, like energy) rather than a yes/no flag, so the song's recommendation return could have higher change with the different genres, therefore, create a new experience for the user.
+Genre and energy are weighted highest now. Genre is the listener's clearest, most stable signal of what they want — it's the first thing worth getting right, and only after that should the system offer them a different genre based on energy and other factors. Energy is weighted equally because it's a simple, objective dial to measure (calm vs. intense), unlike mood, which is a fuzzier, more subjective read on "how someone feels right now." Mood therefore weighs less than before. Acoustic stays at the same solid weight because it is a standing preference — someone who wants acoustic wants it whether they are happy or not, energetic or not.
 
 ### Weights (sum to 100)
 
 | Attribute | Weight | Why |
 |-----------|:------:|-----|
-| Mood      | 30 | What the listener feels like right now |
-| Energy    | 30 | Physical intensity wanted (workout vs. study) |
-| Genre     | 20 | Flexible; people cross genres for a mood/energy |
+| Genre     | 30 | The listener's clearest, most stable preference — get this right first |
+| Energy    | 30 | Physical intensity wanted (workout vs. study); simpler and more objective to measure than mood |
+| Mood      | 20 | What the listener feels like right now, but fuzzier/more subjective than energy |
 | Acoustic  | 20 | Standing preference, independent of mood/energy — kept as a floor |
-| **Total** | **100** | Mood + Energy = 60 → they still lead |
+| **Total** | **100** | Genre + Energy = 60 → they now lead |
 
 ### Formula
 
 ```
-Score = 30·m + 30·e + 20·g + 20·a      (each sub-score is 0..1 → total 0..100)
+Score = 20·m + 30·e + 30·g + 20·a      (each sub-score is 0..1 → total 0..100)
 ```
 
 - **m (mood)**  = 1 if the song's mood equals the user's favorite mood, else 0
@@ -106,14 +106,14 @@ acoustic both use the same closeness formula).
 ### Worked example
 User: favorite_genre=pop, favorite_mood=happy, target_energy=0.8, target_acousticness=0.2
 
-| Song | genre | mood | energy | acoustic | m·30 | e·30 | g·20 | a·20 | Total |
+| Song | genre | mood | energy | acoustic | g·30 | e·30 | m·20 | a·20 | Total |
 |------|-------|------|:------:|:--------:|:----:|:----:|:----:|:----:|:-----:|
 | Sunrise City   | pop        | happy   | 0.82 | 0.18 | 30 | 29.4 | 20 | 19.6 | **99.0** |
-| Rooftop Lights | indie pop  | happy   | 0.76 | 0.35 | 30 | 28.8 | 0  | 17.0 | **75.8** |
-| Gym Hero       | pop        | intense | 0.93 | 0.05 | 0  | 26.1 | 20 | 17.0 | **63.1** |
+| Gym Hero       | pop        | intense | 0.93 | 0.05 | 30 | 26.1 | 0  | 17.0 | **73.1** |
+| Rooftop Lights | indie pop  | happy   | 0.76 | 0.35 | 0  | 28.8 | 20 | 17.0 | **65.8** |
 
-Rooftop Lights (wrong genre, right mood+energy) beats Gym Hero (right genre,
-wrong mood) — confirming genre yields to mood+energy.
+Gym Hero (right genre, wrong mood) now beats Rooftop Lights (wrong genre,
+right mood+energy) — confirming genre + energy now lead over mood + acoustic.
 
 ## Ranking Rule (turning scores into recommendations)
 
@@ -136,3 +136,28 @@ Optional refinements to revise later:
 ### Tuning notes (to revise later)
 - Weights are variables, not law — try mood 35 / energy 30 / genre 20 / acoustic 15 and compare rankings (good for the README "Experiments" section).
 - Optional: partial mood credit via an adjacency table (e.g. chill↔relaxed = 0.5) so a near-miss mood still beats a total mismatch.
+
+## Scoring Modes
+
+`score_song`/`recommend_songs`/`Recommender.recommend` take a `mode` argument selecting
+which weight table to score with, chosen from `SCORING_MODES` in `recommender.py`. Each
+mode still spends the same 100-point pool across mood/energy/genre/acoustic — only the
+split changes. `"balanced"` is the original weighting above and remains the default.
+Each of the other 4 modes gives its named attribute 50 points and splits the remaining
+50 evenly across the other three (50/3 ≈ 16.67 each).
+
+| Mode | Genre | Energy | Mood | Acoustic |
+|------|:-----:|:------:|:----:|:--------:|
+| balanced (default) | 30 | 30 | 20 | 20 |
+| genre_first | 50 | 16.67 | 16.67 | 16.67 |
+| mood_first | 16.67 | 16.67 | 50 | 16.67 |
+| energy_focused | 16.67 | 50 | 16.67 | 16.67 |
+| acoustic_focused | 16.67 | 16.67 | 16.67 | 50 |
+
+An unrecognized mode name raises `ValueError` rather than silently falling back to
+`"balanced"`, so a typo surfaces immediately instead of quietly re-scoring under the
+wrong weights.
+
+`main.py` prompts for a mode separately before scoring each sample profile (so
+different profiles in the same run can compare different modes side by side), and
+prints the active mode name alongside each profile's recommendations.
